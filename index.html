@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memorama Rally 2027</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#d63384,#f48fb1,#fce4ec);
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+padding:20px;
+}
+
+.contenedor{
+width:100%;
+max-width:1450px;
+background:#fff;
+border-radius:20px;
+padding:20px;
+box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+
+h1{
+text-align:center;
+color:#d63384;
+margin-bottom:20px;
+}
+
+.barra{
+display:flex;
+justify-content:space-between;
+align-items:center;
+flex-wrap:wrap;
+gap:15px;
+margin-bottom:20px;
+}
+
+.info{
+display:flex;
+gap:25px;
+font-weight:bold;
+font-size:18px;
+color:#d63384;
+}
+
+button{
+padding:12px 25px;
+background:#d63384;
+color:#fff;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-size:16px;
+transition:.3s;
+}
+
+button:hover{
+background:#ad1457;
+}
+
+#tablero{
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+}
+
+.carta{
+height:145px;
+perspective:1000px;
+cursor:pointer;
+}
+
+.cartaInner{
+position:relative;
+width:100%;
+height:100%;
+transition:1.2s;
+transform-style:preserve-3d;
+}
+
+.carta.volteada .cartaInner{
+transform:rotateY(180deg);
+}
+
+.frente,.atras{
+position:absolute;
+width:100%;
+height:100%;
+border-radius:15px;
+display:flex;
+justify-content:center;
+align-items:center;
+padding:10px;
+text-align:center;
+backface-visibility:hidden;
+box-shadow:0 5px 15px rgba(0,0,0,.2);
+font-size:14px;
+font-weight:bold;
+}
+
+.atras{
+background:#d63384;
+color:white;
+font-size:42px;
+}
+
+.frente{
+background:white;
+border:3px solid #d63384;
+transform:rotateY(180deg);
+}
+
+.oculta{
+visibility:hidden;
+opacity:0;
+transform:scale(.1);
+transition:.5s;
+}
+
+#victoria{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.85);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+#victoria div{
+background:white;
+padding:40px;
+border-radius:20px;
+text-align:center;
+max-width:450px;
+}
+
+#victoria h2{
+color:#d63384;
+margin-bottom:20px;
+font-size:40px;
+}
+
+@media(max-width:900px){
+
+#tablero{
+grid-template-columns:repeat(4,1fr);
+}
+
+}
+
+@media(max-width:650px){
+
+#tablero{
+grid-template-columns:repeat(2,1fr);
+}
+
+.carta{
+height:170px;
+}
+
+.barra{
+flex-direction:column;
+}
+
+.info{
+flex-direction:column;
+align-items:center;
+}
+
+button{
+width:100%;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="contenedor">
+
+<h1>🧠 MEMORAMA CAPACITACIÓN ELECTORAL</h1>
+
+<div class="barra">
+
+<div class="info">
+
+<div>⏱ <span id="tiempo">00:00</span></div>
+
+<div>🎯 <span id="movimientos">0</span></div>
+
+<div>✅ <span id="parejas">0</span>/10</div>
+
+</div>
+
+<button id="reiniciar">Reiniciar</button>
+
+</div>
+
+<div id="tablero"></div>
+
+</div>
+
+<div id="victoria">
+
+<div>
+
+<h2>🏆 ¡Felicidades!</h2>
+
+<p>Has terminado el memorama.</p>
+
+<p>Tiempo: <span id="tiempoFinal"></span></p>
+
+<p>Movimientos: <span id="movFinal"></span></p>
+
+<button onclick="reiniciarJuego()">Jugar nuevamente</button>
+
+</div>
+
+</div>
+
+<script>
+
+const datos=[
+{id:1,texto:"Supervisor/a Electoral (SE)",tipo:"c"},
+{id:1,texto:"Figura encargada de coordinar, apoyar y verificar las actividades de capacitación y asistencia electoral en su Zona de Responsabilidad Electoral (ZORE)",tipo:"d"},
+{id:2,texto:"Capacitador/a-Asistente Electoral (CAE)",tipo:"c"},
+{id:2,texto:"Figura responsable de la capacitación y asistencia electoral en el campo, fundamental para la integración y funcionamiento de las casillas",tipo:"d"},
+{id:3,texto:"13%",tipo:"c"},
+{id:3,texto:"Ciudadanía insaculada que será visitada en la Primera Etapa de Capacitación",tipo:"d"},
+{id:4,texto:"Momentos de la Jornada Electoral",tipo:"c"},
+{id:4,texto:"Preparación e instalación, votación y llenado, integración y publicación de resultados y clausura",tipo:"d"},
+{id:5,texto:"Casilla básica",tipo:"c"},
+{id:5,texto:"cuando hay más de 750 electores en la lista nominal de la sección",tipo:"d"},
+{id:6,texto:"Carta-notificación",tipo:"c"},
+{id:6,texto:"Documento que contiene un QR y los datos de la ciudadanía para su posible participación",tipo:"d"},
+{id:7,texto:"Medidas de inclusión",tipo:"c"},
+{id:7,texto:"Garantizan el derecho al voto y la participación electoral de todas las personas, asegurando la igualdad y la no discriminación de los FMDC",tipo:"d"},
+{id:8,texto:"Etapas del Proceso Electoral",tipo:"c"},
+{id:8,texto:"Preparación de la elección, jornada electoral, resultados y declaraciones de validez de las elecciones, así como el dictamen y declaraciones de validez de la elección",tipo:"d"},
+{id:9,texto:"Revisita",tipo:"c"},
+{id:9,texto:"Es el momento en que la o el CAE regresará al domicilio de la ciudadanía sorteada que anteriormente fue visitada pero no localizada",tipo:"d"},
+{id:10,texto:"Notificación",tipo:"c"},
+{id:10,texto:"Es el acto mediante el cual se entrega la carta-notificación a la ciudadanía sorteada o informante adecuado/a.",tipo:"d"}
+];
+
+let primera=null;
+let segunda=null;
+let bloqueo=false;
+let movimientos=0;
+let parejas=0;
+let segundos=0;
+let minutos=0;
+let reloj=null;
+
+function mezclar(a){
+for(let i=a.length-1;i>0;i--){
+const j=Math.floor(Math.random()*(i+1));
+[a[i],a[j]]=[a[j],a[i]];
+}
+return a;
+}
+
+function crearTablero(){
+
+const tablero=document.getElementById("tablero");
+tablero.innerHTML="";
+
+const cartas=mezclar([...datos]);
+
+cartas.forEach(item=>{
+
+const carta=document.createElement("div");
+
+carta.className="carta";
+
+carta.dataset.id=item.id;
+
+carta.innerHTML=`
+
+<div class="cartaInner">
+
+<div class="atras">?</div>
+
+<div class="frente">
+
+${item.texto}
+
+</div>
+
+</div>
+
+`;
+
+carta.onclick=voltear;
+
+tablero.appendChild(carta);
+
+});
+
+}function voltear(){
+
+if(bloqueo) return;
+
+if(this===primera) return;
+
+if(this.classList.contains("oculta")) return;
+
+this.classList.add("volteada");
+
+if(!primera){
+
+primera=this;
+
+return;
+
+}
+
+segunda=this;
+
+movimientos++;
+
+document.getElementById("movimientos").textContent=movimientos;
+
+comparar();
+
+}
+
+function comparar(){
+
+bloqueo=true;
+
+if(primera.dataset.id===segunda.dataset.id){
+
+setTimeout(()=>{
+
+primera.classList.add("oculta");
+segunda.classList.add("oculta");
+
+parejas++;
+
+document.getElementById("parejas").textContent=parejas;
+
+primera=null;
+segunda=null;
+bloqueo=false;
+
+if(parejas===10){
+
+ganar();
+
+}
+
+},900);
+
+}else{
+
+setTimeout(()=>{
+
+primera.classList.remove("volteada");
+segunda.classList.remove("volteada");
+
+primera=null;
+segunda=null;
+bloqueo=false;
+
+},1800);
+
+}
+
+}
+
+function iniciarTiempo(){
+
+clearInterval(reloj);
+
+reloj=setInterval(()=>{
+
+segundos++;
+
+if(segundos>=60){
+
+segundos=0;
+minutos++;
+
+}
+
+const mm=minutos.toString().padStart(2,"0");
+const ss=segundos.toString().padStart(2,"0");
+
+document.getElementById("tiempo").textContent=
+mm+":"+ss;
+
+},1800);
+
+}
+
+function ganar(){
+
+clearInterval(reloj);
+
+document.getElementById("tiempoFinal").textContent=
+document.getElementById("tiempo").textContent;
+
+document.getElementById("movFinal").textContent=
+movimientos;
+
+document.getElementById("victoria").style.display=
+"flex";
+
+confeti();
+
+}
+
+function reiniciarJuego(){
+
+clearInterval(reloj);
+
+primera=null;
+segunda=null;
+bloqueo=false;
+
+movimientos=0;
+parejas=0;
+
+segundos=0;
+minutos=0;
+
+document.getElementById("movimientos").textContent="0";
+document.getElementById("parejas").textContent="0";
+document.getElementById("tiempo").textContent="00:00";
+
+document.getElementById("victoria").style.display=
+"none";
+
+crearTablero();
+
+iniciarTiempo();
+
+}
+
+function confeti(){
+
+const colores=[
+"#ff0000",
+"#00ff00",
+"#0000ff",
+"#ffff00",
+"#ff00ff",
+"#00ffff",
+"#ff8800",
+"#8800ff"
+];
+
+for(let i=0;i<250;i++){
+
+const c=document.createElement("div");
+
+c.style.position="fixed";
+c.style.left=Math.random()*100+"vw";
+c.style.top="-20px";
+c.style.width="10px";
+c.style.height="10px";
+c.style.background=
+colores[Math.floor(Math.random()*colores.length)];
+
+c.style.zIndex="9999";
+
+c.style.borderRadius="50%";
+
+document.body.appendChild(c);
+
+const duracion=
+(Math.random()*3+2)*1000;
+
+c.animate(
+
+[
+{
+transform:"translateY(0px) rotate(0deg)"
+},
+{
+transform:
+`translateY(${window.innerHeight+100}px) rotate(720deg)`
+}
+],
+
+{
+duration:duracion,
+iterations:1
+}
+
+);
+
+setTimeout(()=>{
+
+c.remove();
+
+},duracion);
+
+}
+
+}document
+.getElementById("reiniciar")
+.addEventListener("click",reiniciarJuego);
+
+window.onload=()=>{
+
+crearTablero();
+
+iniciarTiempo();
+
+};
+
+</script>
+
+</body>
+
+</html>
